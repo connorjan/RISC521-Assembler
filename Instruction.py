@@ -101,11 +101,16 @@ class Instruction:
 			return
 		if self.InsertAddress >= 0:
 			return
-		if self.OpCode == None or self.Operand1 == None:
-			Common.Error(self.Line, "Invalid OpCode / Operand 1")
-		else:
-			machineCode += Common.NumToBinaryString(self.OpCode, 4) # OpCode
-			machineCode += Common.NumToBinaryString(self.Operand1, 3) # Ri
+		if self.OpCode == None:
+			Common.Error(self.Line, "Invalid OpCode")
+		elif self.Mnemonic == "LD" or self.Mnemonic == "ST" or self.OpCode == 0x4: # Load, store or jump:
+			if self.Offset == None:
+				self.Offset = 0;
+		elif self.Operand1 == None:
+			Common.Error(self.Line, "Invalid Operand1")
+
+		machineCode += Common.NumToBinaryString(self.OpCode, 4) # OpCode
+		machineCode += Common.NumToBinaryString(self.Operand1, 3) # Ri
 
 		if self.Operand2 != None:
 			machineCode += Common.NumToBinaryString(self.Operand2, 3) # Rj
@@ -118,7 +123,7 @@ class Instruction:
 
 		offsetLen = REGISTER_WIDTH - len(machineCode)
 		if self.Offset != None:
-			machineCode += Common.NumToBinaryString(self.Offset, offsetLen)
+			machineCode += Common.NumToBinaryString(0, offsetLen) # Not using offset in the machineCode anymore. It is placed in IW2.
 		else:
 			machineCode += Common.NumToBinaryString(0, offsetLen)
 
@@ -128,7 +133,7 @@ class Instruction:
 		self.MachineCode = machineCode
 
 	def Decode(self):
-		self.Split = [piece for piece in re.split(" |,|\t", self.Line.String) if piece != '']
+		self.Split = [piece for piece in re.split(" |,|\t", self.Line.String) if piece != ''] # Split the instruction by spaces or commas
 		if self.OpCode >= 0x0 and self.OpCode <= 0x1:
 			self.DecodeDataTransfer()
 		elif self.OpCode == 0x4:

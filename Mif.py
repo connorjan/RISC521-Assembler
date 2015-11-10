@@ -48,7 +48,13 @@ class Mif():
 					_file.write("%s : %s; %% %s %%\n" % (data[0], data[1], comment))
 					continue
 				line = Common.NumToHexString(counter, 2)
-				line += " : %s; %% %s %%\n" % (data, comment)
+				line += " : %s;" % data
+
+				if comment:
+					line += " %% %s %%\n" % comment
+				else:
+					line += "\n"
+
 				_file.write(line)
 
 				counter+=1

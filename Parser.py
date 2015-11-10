@@ -75,11 +75,11 @@ class Assembly:
 	def DecodeDirectives(self):
 		for directive in self.DirectivesLines:
 			split = directive.String.split()
-			if len(split) != 3:
-				Common.Error(constant, "Wrong syntax for directive")
+			if len(split) != 2:
+				Common.Error(directive, "Wrong syntax for directive")
 			# TODO: Add more error checking (like size matches decl)
 			else:
-				self.Directives[split[1]] = split[2]
+				self.Directives[split[0]] = split[1]
 
 	def DecodeCode(self):
 		newCode = []
@@ -120,10 +120,15 @@ class Parser:
 			elif instruction.InsertAddress >= 0:
 				data = (Common.NumToHexString(instruction.InsertAddress), Common.NumToHexString(instruction.InsertValue),4)
 			else:
-				data = Common.NumToHexString(int(instruction.MachineCode, 2), 4)
-				
+				data = Common.NumToHexString(int(instruction.MachineCode, 2), 4)	
 			comment = instruction.Line.String
 			lines.append((data,comment))
+
+			if instruction.Offset != None:
+				data = Common.NumToHexString(instruction.Offset, 4);
+				comment = ""
+				lines.append((data,comment))
+
 		return lines
 
 	def GetConstantsData(self):
