@@ -27,8 +27,9 @@ class Assembly:
 	ConstantsLines = []
 	DirectivesLines = []
 
-	Constants = OrderedDict()
+	Constants = []
 	Directives = {}
+	Labels = {}
 
 	Instructions = []
 
@@ -66,18 +67,18 @@ class Assembly:
 	def DecodeConstants(self):
 		for constant in self.ConstantsLines:
 			split = constant.String.split()
-			if len(split) != 3:
+			if len(split) != 2:
 				Common.Error(constant, "Wrong syntax for constant")
-			# TODO: Add more error checking (like size matches decl)
+			elif not split[0].startswith("0x") or not split[1].startswith("0x"):
+				Common.Error(constant, "Constants must be hex")
 			else:
-				self.Constants[split[1]] = split[2]
+				self.Constants.append((split[0],split[1]))
 
 	def DecodeDirectives(self):
 		for directive in self.DirectivesLines:
 			split = directive.String.split()
 			if len(split) != 2:
 				Common.Error(directive, "Wrong syntax for directive")
-			# TODO: Add more error checking (like size matches decl)
 			else:
 				self.Directives[split[0]] = split[1]
 
@@ -88,10 +89,27 @@ class Assembly:
 				toBeReplaced = "$" + directive
 				if toBeReplaced in line.String:
 					line.String = line.String.replace(toBeReplaced, self.Directives[directive])
+				if line.String.endswith(':'):
+					Common.Error(line, "Label must be on the same line as an instruction")
 			self.Instructions.append(Instruction.Instruction(line))
 			newCode.append(line)
 		self.Code = newCode
 
+	def ResolveLabels(self):
+		addressCounter = 0
+		# Pass 1, get the address associated with each label
+		for instruction in self.Instructions:
+			if instruction.LabelWord:
+				instruction.LabelAddress = addressCounter
+				self.Labels[instruction.LabelWord] = instruction.LabelAddress
+			addressCounter += instruction.InstructionList[instruction.Mnemonic][1]
+		# Pass 2, resolve the label
+		for instruction in self.Instructions:
+			if instruction.NeedsLabelLookup:
+				if instruction.LabelOffset[1:] in self.Labels.keys():
+					instruction.Offset = self.Labels[instruction.LabelOffset[1:]]
+				else:
+					Common.Error(instruction.Line, "Could not find matching label for: %s" % instruction.LabelOffset)
 
 class Parser:
 
@@ -134,12 +152,8 @@ class Parser:
 	def GetConstantsData(self):
 		lines = []
 
-		for constant, value in self.MyAssembly.Constants.iteritems():
-			# TODO
-			#if int(value,16) > 4095:
-			#	Common.Error("Value too large. Must not exceed 0xFFF")
-			#else:
-			lines.append((value.strip("0x"),constant))
+		for constant in self.MyAssembly.Constants:
+			lines.append(((constant[0][2:], constant[1][2:]), ".CONSTANT %s %s" % (constant[0], constant[1])))
 		return lines
 
 	def RemoveComments(self):
@@ -183,3 +197,4 @@ class Parser:
 		self.MyAssembly.WithoutComments = self.RemoveComments()
 		self.Separate()
 		self.MyAssembly.Decode()
+		self.MyAssembly.ResolveLabels()

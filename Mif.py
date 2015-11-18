@@ -47,6 +47,9 @@ class Mif():
 				elif comment.upper().startswith(".INSERT"):
 					_file.write("%s : %s; %% %s %%\n" % (data[0], data[1], comment))
 					continue
+				elif comment.upper().startswith(".CONSTANT"):
+					_file.write("%s : %s;\n" % (data[0], data[1]))
+					continue
 				line = Common.NumToHexString(counter, 2)
 				line += " : %s;" % data
 

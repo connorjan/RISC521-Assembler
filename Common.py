@@ -7,7 +7,7 @@ def Enum(*sequential, **named):
 
 def Error(line, errorMsg):
 	print "Error on line %s:\n\t%s\n%s" % (line.Number, line.String, errorMsg)
-	sys.exit(1)
+	sys.exit(0)
 
 def FileToList(filePath):
 	if os.path.isfile(filePath):

@@ -9,19 +9,23 @@ class Instruction:
 	Line = ""
 	Mnemonic = ""
 	MachineCode = ""
+	LabelWord = ""
+	LabelOffset = ""
 
 	JumpCode = None
+	LabelAddress = None
 	Offset = None
 	OpCode = None
 	Operand1 = None
 	Operand2 = None
 
-	SkipNumber = 0x0
-
 	InsertAddress = -1
 	InsertValue = 0x0
+	SkipNumber = 0x0
 
 	Split = []
+
+	NeedsLabelLookup = False
 
 	RegisterMap = { "R0" : 0x0,
 					"R1" : 0x1,
@@ -32,37 +36,37 @@ class Instruction:
 					"R6" : 0x6,
 					"R7" : 0x7 }
 
-	# This encodes the instruction mnemonic to the opcode
-	InstructionList = {	"LD" 	: 0x0, 
-						"ST" 	: 0x1,
-						"CPY" 	: 0x2,
-						"SWAP"	: 0x3,
-						"JU"	: 0x4,
-						"JZ"	: 0x4,
-						"JNZ"	: 0x4,
-						"JC"	: 0x4,
-						"JNC"	: 0x4,
-						"JV"	: 0x4,
-						"JNV"	: 0x4,
-						"JN"	: 0x4,
-						"JNN"	: 0x4,
-						"ADD"	: 0x5,
-						"SUB"	: 0x6,
-						"ADDC"	: 0x7,
-						"SUBC"	: 0x8,
-						"NOT"	: 0x9,
-						"AND"	: 0xA,
-						"OR"	: 0xB,
-						"SHRA"	: 0xC,
-						"ROTR"	: 0xD,
-						"ADDV"	: 0xE,
-						"NOP" 	: 0xF,
-						"INC"	: 0xF,
-						"DEC"	: 0xF,
-						"SHLA"	: 0xF,
-						"CLR"	: 0xF,
-						".SKIP"	: 0xF,
-						".INSERT" : 0xF }
+	# This encodes the instruction mnemonic to the (opcode, instruction word count)
+	InstructionList = {	"LD" 	: [0x0, 2], 
+						"ST" 	: [0x1, 2], 
+						"CPY" 	: [0x2, 1], 
+						"SWAP"	: [0x3, 1], 
+						"JU"	: [0x4, 2], 
+						"JZ"	: [0x4, 2], 
+						"JNZ"	: [0x4, 2], 
+						"JC"	: [0x4, 2], 
+						"JNC"	: [0x4, 2], 
+						"JV"	: [0x4, 2], 
+						"JNV"	: [0x4, 2], 
+						"JN"	: [0x4, 2], 
+						"JNN"	: [0x4, 2], 
+						"ADD"	: [0x5, 1], 
+						"SUB"	: [0x6, 1], 
+						"ADDC"	: [0x7, 1], 
+						"SUBC"	: [0x8, 1], 
+						"NOT"	: [0x9, 1], 
+						"AND"	: [0xA, 1], 
+						"OR"	: [0xB, 1], 
+						"SHRA"	: [0xC, 1], 
+						"ROTR"	: [0xD, 1], 
+						"ADDV"	: [0xE, 1], 
+						"NOP" 	: [0xF, 1], 
+						"INC"	: [0xF, 1], 
+						"DEC"	: [0xF, 1], 
+						"SHLA"	: [0xF, 1], 
+						"CLR"	: [0xF, 1], 
+						".SKIP"	: [0xF, 0], 
+						".INSERT" : [0xF, 0] }
 
 	# This list encodes the jump instructions to the special CNVZ field in the IW
 	JumpList = { 	"JU"	: 0x0,
@@ -77,6 +81,7 @@ class Instruction:
 
 	def __init__(self, line):
 		self.Line = line
+		self.GetLabel()
 		self.GetOpCode()
 		self.Decode()
 		self.Assemble()
@@ -166,31 +171,31 @@ class Instruction:
 		if self.Mnemonic == "NOP":
 			if len(self.Split) != 1:
 				Common.Error(self.Line, "Wrong number of operands")
-			self.OpCode = self.InstructionList["ADDC"]
+			self.OpCode = self.InstructionList["ADDC"][0]
 			self.Operand1 = 0x0
 			self.Operand2 = 0x0
 		elif self.Mnemonic == "INC":
 			if len(self.Split) != 2:
 				Common.Error(self.Line, "Wrong number of operands")
-			self.OpCode = self.InstructionList["ADDC"]
+			self.OpCode = self.InstructionList["ADDC"][0]
 			self.Operand1 = self.GetFirstRegister(self.Split[1])
 			self.Operand2 = 0x1
 		elif self.Mnemonic == "DEC":
 			if len(self.Split) != 2:
 				Common.Error(self.Line, "Wrong number of operands")
-			self.OpCode = self.InstructionList["SUBC"]
+			self.OpCode = self.InstructionList["SUBC"][0]
 			self.Operand1 = self.GetFirstRegister(self.Split[1])
 			self.Operand2 = 0x1
 		elif self.Mnemonic == "SHLA":
 			if len(self.Split) != 2:
 				Common.Error(self.Line, "Wrong number of operands")
-			self.OpCode = self.InstructionList["ADD"]
+			self.OpCode = self.InstructionList["ADD"][0]
 			self.Operand1 = self.GetFirstRegister(self.Split[1])
 			self.Operand2 = self.GetFirstRegister(self.Split[1])
 		elif self.Mnemonic == "CLR":
 			if len(self.Split) != 2:
 				Common.Error(self.Line, "Wrong number of operands")
-			self.OpCode = self.InstructionList["SUB"]
+			self.OpCode = self.InstructionList["SUB"][0]
 			self.Operand1 = self.GetFirstRegister(self.Split[1])
 			self.Operand2 = self.GetFirstRegister(self.Split[1])
 		elif self.Mnemonic == ".SKIP":
@@ -212,7 +217,7 @@ class Instruction:
 		self.JumpCode = self.JumpList[self.Mnemonic]
 		if len(self.Split) == 3:	# If we are provided an offset		
 			self.Operand1, self.Offset = self.GetOperandWithOffset(self.Split[1],self.Split[2])
-		elif len(self.Split) == 2: # If we are not provided an offset
+		elif len(self.Split) == 2: # If we are not provided an offset or Register
 			self.Operand1, self.Offset = self.GetOperandWithOffset(self.Split[1])
 		else:
 			Common.Error(self.Line, "Unknown operands")
@@ -246,14 +251,20 @@ class Instruction:
 		if self.Mnemonic not in self.InstructionList.keys():
 			Common.Error(self.Line, "Unknown instruction: %s" % self.Mnemonic)
 		else:
-			self.OpCode = self.InstructionList[self.Mnemonic]
+			self.OpCode = self.InstructionList[self.Mnemonic][0]
 
 	def GetOperandWithOffset(self, operand, offset = "0x0"):
-		operand = operand.replace("M[",'').replace(']','').replace(',','')
-		operand = self.GetFirstRegister(operand)
+		if operand.startswith('@'):
+			self.LabelOffset = operand.replace("M[",'').replace(']','').replace(',','')
+			self.NeedsLabelLookup = True
+			operand = 0x0
+			offset = None
+		else:
+			operand = operand.replace("M[",'').replace(']','').replace(',','')
+			operand = self.GetFirstRegister(operand)
 
-		offset = offset.replace(']','').replace(',','')
-		offset = self.GetHexOperand(offset)
+			offset = offset.replace(']','').replace(',','')
+			offset = self.GetHexOperand(offset)
 
 		return operand, offset
 
@@ -263,14 +274,18 @@ class Instruction:
 		return self.GetSecondRegister(operand)
 
 	def GetHexOperand(self, operand):
-		if not operand.startswith("0x"):
-			Common.Error(self.Line, "Operand must be hex: %s" % operand)
-		val = 0
+		if not operand.startswith("0x") and not operand.startswith('@'):
+			Common.Error(self.Line, "Operand must be hex or a label: %s" % operand)
 		try:
-			val = int(operand, 16)
+			return int(operand, 16)
 		except ValueError:
-			Common.Error(self.Line, "Operand must be hex: %s" % operand)		
-		return val
+			Common.Error(self.Line, "Operand must be hex: %s" % operand)
+
+	def GetLabel(self):
+		label = self.Line.String.split()[0]
+		if label.endswith(':'):
+			self.LabelWord = label[:len(label)-1]
+			self.Line.String = self.Line.String[len(label):].strip()
 
 	def GetSecondRegister(self, operand):
 		if operand not in self.RegisterMap.keys():

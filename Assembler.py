@@ -26,7 +26,7 @@ def main(args):
 	myParser = Parser.Parser(assemblyFile)	
 	programMif = Mif.Mif(output, args["width"], args["depth"], ["Program memory for: %s" % assemblyFile])
 	myParser.Parse()
-	programMif.AddData(myParser.GetAssemblyData()).AddData(myParser.GetConstantsData()).Write()
+	programMif.AddData(myParser.GetConstantsData()).AddData(myParser.GetAssemblyData()).Write()
 
 	end = clock()
 
