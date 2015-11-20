@@ -1,5 +1,6 @@
-import os
 from collections import OrderedDict
+import os
+import re
 
 import Common
 import Instruction
@@ -86,8 +87,9 @@ class Assembly:
 		newCode = []
 		for line in self.Code:
 			for directive, value in self.Directives.iteritems():
+				extracted = [piece for piece in re.split("\[|\]| |,|\t", line.String) if piece.startswith('$')] # Split the instruction by spaces, commas, and brackets
 				toBeReplaced = "$" + directive
-				if toBeReplaced in line.String:
+				if toBeReplaced in extracted:
 					line.String = line.String.replace(toBeReplaced, self.Directives[directive])
 				if line.String.endswith(':'):
 					Common.Error(line, "Label must be on the same line as an instruction")
