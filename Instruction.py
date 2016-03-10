@@ -247,7 +247,11 @@ class Instruction:
 			Common.Error(self.Line, "This should be impossible to get to")
 
 	def GetOpCode(self):
-		self.Mnemonic = self.Line.String.split()[0].upper()
+		try:
+			self.Mnemonic = self.Line.String.split()[0].upper()
+		except Exception as e:
+			print e
+			print self.Line
 		if self.Mnemonic not in self.InstructionList.keys():
 			Common.Error(self.Line, "Unknown instruction: %s" % self.Mnemonic)
 		else:
